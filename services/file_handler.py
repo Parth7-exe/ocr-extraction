@@ -18,6 +18,8 @@ from services.layout_engine import analyze_layout
 from services.extractor import extract_invoice_data
 from services.validator import validate_extraction
 from services.json_builder import build_json_response
+from services.table_extractor import extract_tables
+from pdfminer.high_level import extract_text as pdfminer_extract_text
 
 
 def process_file(
@@ -53,6 +55,11 @@ def process_file(
     # Extract runtime metadata injected by orchestrator
     template_used = extracted.pop("_runtime_template_used_", "generic")
 
+    # Extract Native Tables
+    tables = []
+    if file_ext == ".pdf":
+        tables = extract_tables(file_path)
+
     # Optional validation
     validation = None
     if enable_validation:
@@ -65,7 +72,9 @@ def process_file(
         raw_text=merged["raw_text"],
         validation=validation,
         engine=merged.get("engine", "tesseract"),
-        template=template_used
+        template=template_used,
+        tables_detected=len(tables) > 0,
+        line_items=tables
     )
 
 
@@ -129,8 +138,33 @@ def _process_pdf(file_path: str) -> list:
                         "confidence": 100
                     })
                 else:
-                    # Append None to trigger OCR pass 2 targeted exclusively on this page
-                    results.append(None)
+                    # Tier 2: Try PyMuPDF (fitz) native text extraction
+                    fitz_doc = fitz.open(file_path)
+                    fitz_page = fitz_doc[page_num - 1]
+                    fitz_text = fitz_page.get_text("text").strip()
+                    fitz_doc.close()
+                    
+                    if len(fitz_text) > 20: # Has text, wasn't caught by pdfplumber
+                        results.append({
+                            "words": _text_to_synthetic_words(fitz_text),
+                            "raw_text": fitz_text,
+                            "engine": "pymupdf",
+                            "confidence": 95
+                        })
+                    else:
+                        # Tier 3: Try pdfminer.six text fallback
+                        miner_text = pdfminer_extract_text(file_path, page_numbers=[page_num - 1]).strip()
+                        if len(miner_text) > 20:
+                            results.append({
+                                "words": _text_to_synthetic_words(miner_text),
+                                "raw_text": miner_text,
+                                "engine": "pdfminer.six",
+                                "confidence": 90
+                            })
+                        else:
+                            # ALL native text extractions failed. The PDF is guaranteed to be a scanned image.
+                            # Append None to trigger OCR pass 4 targeted exclusively on this page
+                            results.append(None)
     except Exception as e:
         print(f"[File Handler] pdfplumber native extraction failed: {e}. Falling back to full OCR.")
         results = [None] # Force full OCR fallback

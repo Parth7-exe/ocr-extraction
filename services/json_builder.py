@@ -16,14 +16,13 @@ def build_json_response(
     extracted: dict,
     raw_text: str,
     validation: Optional[dict] = None,
-    engine: str = "tesseract",
+    engine: str = "hybrid",
     template: str = "generic",
+    tables_detected: bool = False,
+    line_items: Optional[list] = None,
 ) -> dict:
     """
-    Build the final JSON output structure based on strictly defined schema.
-
-    Returns:
-        Structured JSON-serializable dict.
+    Constructs the final rigorous JSON schema enforcing validation rules.
     """
     response = {
         "file_id": file_id,
@@ -31,21 +30,21 @@ def build_json_response(
             "invoice_number": extracted.get("invoice_number"),
             "date": extracted.get("date"),
         },
-        "vendor_details": {
-            "name": extracted.get("vendor_name"),
-            # Including these as bonuses since they are extracted
-            "pan_number": extracted.get("pan_number"),
-            "gstin": extracted.get("gstin"),
-        },
         "amount_details": {
             "subtotal": extracted.get("subtotal"),
             "tax": extracted.get("tax"),
             "total": extracted.get("total"),
         },
-        "line_items": extracted.get("line_items", []),
+        "vendor_details": {
+            "vendor_name": extracted.get("vendor_name"),
+            "pan_number": extracted.get("pan_number"),
+            "gstin": extracted.get("gstin"),
+        },
+        "line_items": line_items if line_items is not None else [],
         "meta": {
-            "ocr_engine": engine,
-            "template_used": template,
+            "source": engine,
+            "tables_detected": tables_detected,
+            "template_used": template
         },
         "raw_text": raw_text.splitlines() if raw_text else []
     }
