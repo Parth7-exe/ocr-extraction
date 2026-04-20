@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus | Invoice Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <main class="container">
+    <header class="header">
+      <div class="logo">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <h1>Nexus OCR</h1>
+      </div>
+      <p class="subtitle">Intelligent, fully-offline extraction of invoice data.</p>
+    </header>
+
+    <div class="main-card glass-panel">
+      
+      <!-- Upload Section -->
+      <section id="upload-section" class="active-section z-transition">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
+          <h3>Drag & Drop your invoice here</h3>
+          <p class="file-hints">Supports JPG, PNG, PDF, and DOCX up to 10MB</p>
+          <div class="file-input-wrapper">
+             <button class="btn btn-secondary">Browse Files</button>
+             <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.pdf,.docx" />
+          </div>
+        </div>
+
+        <div class="options-container">
+          <label class="toggle-switch">
+            <input type="checkbox" id="validation-toggle">
+            <span class="slider"></span>
+          </label>
+          <div class="option-text">
+            <h4>Enable Advanced Validation</h4>
+            <p>Runs business logic rules (GST, PAN, dates, amounts)</p>
+          </div>
+        </div>
+
+        <button id="extract-btn" class="btn btn-primary" disabled>
+          Extract Data
+        </button>
+      </section>
+
+      <!-- Processing State -->
+      <section id="processing-section" class="z-transition hidden">
+        <div class="loader-container">
+          <div class="spinner"></div>
+          <h3 id="loader-status">Processing document...</h3>
+          <p>Running OCR pipeline and structure analysis.</p>
+        </div>
+      </section>
+
+      <!-- Result State -->
+      <section id="result-section" class="z-transition hidden">
+        <div class="result-header">
+          <h3>Extraction Complete</h3>
+          <div class="actions">
+            <button id="reset-btn" class="btn btn-secondary btn-sm">Process Another</button>
+            <a id="download-link" class="btn btn-primary btn-sm" href="#" download>
+               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+               </svg>
+               Download JSON
+            </a>
+          </div>
+        </div>
+        <div class="code-container">
+          <pre><code id="json-output"></code></pre>
+        </div>
+      </section>
+
+    </div>
+  </main>
+  
+  <!-- Add error toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
