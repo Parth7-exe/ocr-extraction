@@ -15,10 +15,7 @@ from docx import Document
 from services.preprocessing import preprocess_image
 from services.ocr_service import run_ocr
 from services.layout_engine import analyze_layout
-from services.extractor import extract_invoice_data
-from services.validator import validate_extraction
-from services.json_builder import build_json_response
-from services.table_extractor import extract_tables
+from services.extractor import extract_document_data
 from pdfminer.high_level import extract_text as pdfminer_extract_text
 
 
@@ -32,7 +29,7 @@ def process_file(
     Main processing orchestrator.
     Routes the file through the appropriate pipeline based on its type.
 
-    Returns a structured JSON-serializable dict.
+    Returns a pure, flat JSON object of key-value pairs.
     """
     if file_ext in (".jpg", ".jpeg", ".png"):
         ocr_results = _process_image(file_path)
@@ -49,33 +46,10 @@ def process_file(
     # Layout analysis
     layout = analyze_layout(merged)
 
-    # Data extraction
-    extracted = extract_invoice_data(merged, layout)
+    # Data extraction → returns flat key-value pair schema directly
+    extracted = extract_document_data(merged, layout)
 
-    # Extract runtime metadata injected by orchestrator
-    template_used = extracted.pop("_runtime_template_used_", "generic")
-
-    # Extract Native Tables
-    tables = []
-    if file_ext == ".pdf":
-        tables = extract_tables(file_path)
-
-    # Optional validation
-    validation = None
-    if enable_validation:
-        validation = validate_extraction(extracted, merged)
-
-    # Build final JSON
-    return build_json_response(
-        file_id=file_id,
-        extracted=extracted,
-        raw_text=merged["raw_text"],
-        validation=validation,
-        engine=merged.get("engine", "tesseract"),
-        template=template_used,
-        tables_detected=len(tables) > 0,
-        line_items=tables
-    )
+    return extracted
 
 
 
@@ -309,14 +283,14 @@ def _merge_ocr_results(results: list) -> dict:
             all_words.append(merged_word)
 
         raw_text_parts.append(result.get("raw_text", ""))
-        engines_used.add(result.get("engine", "tesseract"))
+        engines_used.add(result.get("engine", "paddle"))
 
         # Calculate page height for offset (use max y + h)
         if result.get("words"):
             max_y = max(w["y"] + w["h"] for w in result["words"])
             y_page_offset += max_y + 50  # 50px gap between pages
 
-    engine_val = "hybrid" if len(engines_used) > 1 else (engines_used.pop() if engines_used else "tesseract")
+    engine_val = "hybrid" if len(engines_used) > 1 else (engines_used.pop() if engines_used else "paddle")
 
     return {
         "words": all_words,

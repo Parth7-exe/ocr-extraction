@@ -63,7 +63,7 @@ body {
 }
 
 .container {
-  max-width: 800px;
+  max-width: 1200px; /* Increased to accommodate dual panels */
   margin: 0 auto;
   padding: 40px 20px;
   width: 100%;
@@ -105,6 +105,10 @@ h1 {
   font-size: 1.1rem;
 }
 
+.main-card {
+  width: 100%;
+}
+
 .glass-panel {
   background: var(--surface);
   backdrop-filter: blur(12px);
@@ -112,7 +116,6 @@ h1 {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  width: 100%;
   padding: 40px;
   position: relative;
   overflow: hidden;
@@ -372,13 +375,113 @@ input:checked + .slider:before {
   gap: 12px;
 }
 
+/* Dual Panel Layout */
+.dual-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .dual-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.panel-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+/* Structured Cards */
+.structured-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.data-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.data-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+}
+
+.field-name {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.field-value {
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-align: right;
+  word-break: break-all;
+}
+
+.field-value.amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Code Container (Raw Panel) */
 .code-container {
   background: #1E293B;
   border-radius: 12px;
   padding: 20px;
   overflow: auto;
-  max-height: 400px;
+  max-height: 500px;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  height: 100%;
 }
 
 .code-container pre {

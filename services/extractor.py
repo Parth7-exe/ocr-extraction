@@ -1,42 +1,27 @@
 """
 Extraction Orchestrator
 =======================
-Routes the extraction logic to specific templates based on Template Detector findings.
-Falls back to generic if no template matches.
+Routes the raw OCR text to the pure dynamic key-value pair extractor.
 """
 
-from services.template_detector import detect_template
-from services.template_extractors import zoho, crescent, generic, learned_engine
-from services import template_learner
+from services.dynamic_kvp_engine import stage1_clean_and_group, stage2_extract_key_values
+from services.semantic_formatter import format_structured_data
 
-def extract_invoice_data(ocr_data: dict, layout: dict) -> dict:
+def extract_document_data(ocr_data: dict, layout: dict) -> dict:
     """
-    Main extraction pipeline. Discovers template, delegates.
+    Main extraction pipeline.
+    Returns both raw_text array and clean structured key-value data.
     """
-    # 1. Detect Template
-    template_name = detect_template(ocr_data, layout)
+    # 1. Raw Text Extraction (MANDATORY)
+    raw_text_lines = stage1_clean_and_group(ocr_data, layout)
     
-    # 2. Delegate to appropriate extractor
-    if template_name.startswith("learned:"):
-        # e.g., "learned:abc_corp.json"
-        filename = template_name.split(":", 1)[1]
-        extracted = learned_engine.extract(ocr_data, layout, filename)
-    elif template_name == "zoho":
-        extracted = zoho.extract(ocr_data, layout)
-    elif template_name == "crescent":
-        extracted = crescent.extract(ocr_data, layout)
-    else:
-        # Fallback generic logic (regex, coordinate heuristics)
-        extracted = generic.extract_invoice_data(ocr_data, layout)
-        
-        # ── RL/Learning Hook: Try to memorize this new format ──
-        template_learner.attempt_learning(extracted, layout)
-        
-    # Append the template meta inside the expected structure 
-
-    # (actually handled largely down in json_builder, but returning it here is safe)
-    # The requirement is that json_builder receives the template name. We will attach it 
-    # directly as a private key so file_handler can read it.
-    extracted["_runtime_template_used_"] = template_name
-        
-    return extracted
+    # 2. Key-Value Extraction
+    raw_kv_pairs = stage2_extract_key_values(raw_text_lines)
+    
+    # 3. Formatting, Filtering, and Validation
+    structured_data = format_structured_data(raw_kv_pairs)
+    
+    return {
+        "raw_text": raw_text_lines,
+        "structured_data": structured_data
+    }

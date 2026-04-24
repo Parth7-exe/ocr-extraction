@@ -1,7 +1,7 @@
 """
-PaddleOCR Service
-=================
-Wraps PaddleOCR for fallback/accuracy extraction.
+PaddleOCR Service  (PRIMARY ENGINE)
+====================================
+Wraps PaddleOCR as the main/primary OCR extraction engine.
 
 Returns structured word-level data matching the tesseract output format.
 """

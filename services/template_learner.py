@@ -39,7 +39,7 @@ def attempt_learning(extracted: dict, layout: dict) -> None:
     kv_pairs = layout.get("key_value_pairs", [])
     
     for field, extract_val in extracted.items():
-        if field in ["vendor_name", "_runtime_template_used_"] or extract_val in [None, []]:
+        if field in ["vendor_name", "_runtime_template_used_", "_extraction_metadata"] or extract_val in [None, [], {}]:
             continue
             
         # Reverse map this value to a KV pair to memorize the exact Key anchor

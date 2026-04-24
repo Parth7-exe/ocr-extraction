@@ -9,11 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultSection = document.getElementById('result-section');
   
   const resetBtn = document.getElementById('reset-btn');
-  const downloadLink = document.getElementById('download-link');
+  const downloadRawBtn = document.getElementById('download-raw');
   const jsonOutput = document.getElementById('json-output');
   const toast = document.getElementById('toast');
 
   let currentFile = null;
+  let currentResult = null;
 
   // --- Drag and Drop Handling --- //
 
@@ -81,11 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(errData.detail || `Server error: ${response.status}`);
       }
 
-      const result = await response.json();
+      currentResult = await response.json();
       
-      // Update and show results
-      renderJsonResult(result);
-      downloadLink.href = `/download/${result.file_id}`;
+      // Update results
+      renderRawJson(currentResult);
       
       switchSection(processingSection, resultSection);
 
@@ -98,12 +98,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   resetBtn.addEventListener('click', () => {
     currentFile = null;
+    currentResult = null;
     fileInput.value = '';
-    dropZone.querySelector('h3').textContent = 'Drag & Drop your invoice here';
+    dropZone.querySelector('h3').textContent = 'Drag & Drop your document here';
     dropZone.querySelector('.file-hints').textContent = 'Supports JPG, PNG, PDF, and DOCX up to 10MB';
     extractBtn.disabled = true;
     switchSection(resultSection, uploadSection);
   });
+
+  downloadRawBtn.addEventListener('click', () => {
+    if (!currentResult) return;
+    const docType = currentResult.document_type || 'document';
+    downloadJson(currentResult, `${docType}_full_${currentResult.file_id}.json`);
+  });
+
+  // --- Rendering --- //
+
+  function renderRawJson(jsonObj) {
+    const jsonString = JSON.stringify(jsonObj, null, 2);
+    jsonOutput.innerHTML = syntaxHighlight(jsonString);
+  }
 
   // --- Utilities --- //
 
@@ -112,17 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       from.classList.add('hidden');
       to.classList.remove('hidden');
-      // small delay to allow display:block to apply before animating opacity
       requestAnimationFrame(() => {
         to.classList.add('active-section');
       });
-    }, 400); // matches CSS transition time
+    }, 400);
   }
 
   function showToast(message) {
     toast.textContent = message;
     toast.classList.remove('hidden');
-    // trigger reflow
     void toast.offsetWidth;
     toast.classList.add('show');
     
@@ -132,9 +144,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 4000);
   }
 
-  function renderJsonResult(jsonObj) {
-    const jsonString = JSON.stringify(jsonObj, null, 2);
-    jsonOutput.innerHTML = syntaxHighlight(jsonString);
+  function downloadJson(obj, filename) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   function syntaxHighlight(json) {
@@ -144,8 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/^"/.test(match)) {
             if (/:$/.test(match)) {
                 cls = 'key';
-                // Remove the quote and colon for better styling optionally, 
-                // but keeping it structural is safer.
             } else {
                 cls = 'string';
             }

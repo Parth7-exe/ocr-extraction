@@ -32,10 +32,10 @@ def run_tesseract(preprocessed_img: np.ndarray) -> dict:
     pil_img = Image.fromarray(preprocessed_img)
 
     # Get detailed word-level data with bounding boxes and confidence
-    data = pytesseract.image_to_data(pil_img, output_type=Output.DICT)
+    data = pytesseract.image_to_data(pil_img, output_type=Output.DICT, lang='eng')
 
     # Get full text output
-    raw_text = pytesseract.image_to_string(pil_img).strip()
+    raw_text = pytesseract.image_to_string(pil_img, lang='eng').strip()
 
     # Parse word data and calculate confidence
     words = []

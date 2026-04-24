@@ -2,7 +2,12 @@
 OCR Service
 =============
 Acts as the coordinator for the hybrid OCR pipeline, utilizing
-Tesseract and PaddleOCR based on configuration and confidence thresholds.
+PaddleOCR as the PRIMARY engine and Tesseract OCR as the FALLBACK
+based on configuration and confidence thresholds.
+
+Pipeline Priority:
+  1. PaddleOCR  (primary — higher accuracy, layout-aware)
+  2. Tesseract  (fallback — triggered when Paddle confidence is low)
 """
 
 import numpy as np
@@ -75,30 +80,44 @@ def _normalize_all_rupees(ocr_result: dict) -> dict:
 def run_ocr(preprocessed_img: np.ndarray) -> dict:
     """
     Main OCR orchestrator per page/image.
+    
+    Modes:
+      - "fast":     PaddleOCR only (no fallback).
+      - "accurate": Run BOTH engines, pick the highest confidence result.
+      - "hybrid":   PaddleOCR first; fall back to Tesseract if Paddle 
+                    confidence is below threshold or key fields are missing.
     """
     mode = str(OCR_MODE).strip().lower()
     
     if mode == "fast":
-        return _normalize_all_rupees(run_tesseract(preprocessed_img))
+        # ── Fast mode: PaddleOCR only ──────────────────────────
+        print("[OCR] Fast mode — running PaddleOCR only")
+        return _normalize_all_rupees(run_paddle(preprocessed_img))
         
     elif mode == "accurate":
-        # Always run both and pick the highest confidence
-        t_res = run_tesseract(preprocessed_img)
+        # ── Accurate mode: run both, pick best ─────────────────
+        print("[OCR] Accurate mode — running both engines")
         p_res = run_paddle(preprocessed_img)
-        best = p_res if p_res["confidence"] > t_res["confidence"] else t_res
+        t_res = run_tesseract(preprocessed_img)
+        best = p_res if p_res["confidence"] >= t_res["confidence"] else t_res
+        print(f"[OCR] Winner: {best['engine']} (Paddle={p_res['confidence']:.1f}%, Tesseract={t_res['confidence']:.1f}%)")
         return _normalize_all_rupees(best)
         
     else:
-        # Default Hybrid Mode: fall back to Paddle only if needed
-        t_res = run_tesseract(preprocessed_img)
-        required_fields = _check_required_fields(t_res.get("raw_text", ""))
-        
-        if t_res.get("confidence", 0) >= MIN_HYBRID_CONFIDENCE and required_fields:
-            return _normalize_all_rupees(t_res)
-            
-        print("[DEBUG] Triggering PaddleOCR fallback...")
+        # ── Hybrid mode (default): PaddleOCR primary, Tesseract fallback ──
+        print("[OCR] Hybrid mode — PaddleOCR primary, Tesseract fallback")
         p_res = run_paddle(preprocessed_img)
+        required_fields = _check_required_fields(p_res.get("raw_text", ""))
         
-        best = p_res if p_res.get("confidence", 0) > t_res.get("confidence", 0) else t_res
+        if p_res.get("confidence", 0) >= MIN_HYBRID_CONFIDENCE and required_fields:
+            print(f"[OCR] PaddleOCR accepted (confidence={p_res['confidence']:.1f}%)")
+            return _normalize_all_rupees(p_res)
+            
+        # PaddleOCR didn't meet the bar — trigger Tesseract fallback
+        print(f"[OCR] PaddleOCR below threshold (confidence={p_res.get('confidence', 0):.1f}%, fields_ok={required_fields}). Triggering Tesseract fallback...")
+        t_res = run_tesseract(preprocessed_img)
+        
+        # Pick whichever engine produced the better result
+        best = t_res if t_res.get("confidence", 0) > p_res.get("confidence", 0) else p_res
+        print(f"[OCR] Final pick: {best['engine']} (Paddle={p_res.get('confidence', 0):.1f}%, Tesseract={t_res.get('confidence', 0):.1f}%)")
         return _normalize_all_rupees(best)
-
